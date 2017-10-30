@@ -1,0 +1,15 @@
+image: ubuntu:latest
+
+before_script:
+  - apt-get update
+  - apt-get upgrade -yqq
+  - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev -yqq
+
+pages:
+  script:
+    - make defconfig
+    - make -j4
+  artifacts:
+    paths:
+      - arch
+
