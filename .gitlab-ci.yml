@@ -5,11 +5,8 @@ before_script:
   - apt-get upgrade -yqq
   - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev -yqq
 
-pages:
+build:linuxrc
   script:
     - make defconfig
     - make -j4
-  artifacts:
-    paths:
-      - arch
 
