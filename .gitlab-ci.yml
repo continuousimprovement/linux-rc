@@ -5,8 +5,23 @@ before_script:
   - apt-get upgrade -yqq
   - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev libelf-dev -yqq
 
-build:linuxrc:
+build:
   script:
-    - make defconfig
-    - make -j4
+  - make defconfig
+  - make -j4
+  - mkdir public/
+  - rsync -av arch/ public/
+  artifacts:
+    paths:
+    - public/
+
+pages:
+  stage: deploy
+  script:
+  - echo 'Nothing to do...'
+  dependencies:
+  - build
+  artifacts:
+    paths:
+    - public
 
