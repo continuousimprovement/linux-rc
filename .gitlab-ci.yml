@@ -3,7 +3,7 @@ image: ubuntu:latest
 before_script:
   - apt-get update
   - apt-get upgrade -yqq
-  - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev libelf-dev bison bsdmainutils -yqq
+  - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev libelf-dev bison flex bsdmainutils -yqq
 
 build:
   script:
