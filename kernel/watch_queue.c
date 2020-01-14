@@ -115,7 +115,7 @@ static bool post_one_notification(struct watch_queue *wqueue,
 	buf->ops = &watch_queue_pipe_buf_ops;
 	buf->offset = offset;
 	buf->len = len;
-	buf->flags = PIPE_BUF_FLAG_WHOLE;
+	buf->flags = 0;
 	pipe->head = head + 1;
 
 	if (!test_and_clear_bit(note, wqueue->notes_bitmap)) {
@@ -132,8 +132,6 @@ out:
 	return done;
 
 lost:
-	buf = &pipe->bufs[(head - 1) & mask];
-	buf->flags |= PIPE_BUF_FLAG_LOSS;
 	goto out;
 }
 
