@@ -1780,7 +1780,13 @@ static const struct mount_opts {
 	{Opt_min_batch_time, 0, MOPT_GTE0},
 	{Opt_inode_readahead_blks, 0, MOPT_GTE0},
 	{Opt_init_itable, 0, MOPT_GTE0},
-	{Opt_dax, EXT4_MOUNT_DAX_ALWAYS, MOPT_SET},
+	{Opt_dax, EXT4_MOUNT_DAX_ALWAYS, MOPT_SET | MOPT_SKIP},
+	{Opt_dax_always, EXT4_MOUNT_DAX_ALWAYS,
+		MOPT_EXT4_ONLY | MOPT_SET | MOPT_SKIP},
+	{Opt_dax_inode, EXT4_MOUNT2_DAX_INODE,
+		MOPT_EXT4_ONLY | MOPT_SET | MOPT_SKIP},
+	{Opt_dax_never, EXT4_MOUNT2_DAX_NEVER,
+		MOPT_EXT4_ONLY | MOPT_SET | MOPT_SKIP},
 	{Opt_stripe, 0, MOPT_GTE0},
 	{Opt_resuid, 0, MOPT_GTE0},
 	{Opt_resgid, 0, MOPT_GTE0},
@@ -2131,40 +2137,16 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
 		switch (token) {
 		case Opt_dax:
 		case Opt_dax_always:
-			if (is_remount &&
-			    (!(sbi->s_mount_opt & EXT4_MOUNT_DAX_ALWAYS) ||
-			     (sbi->s_mount_opt2 & EXT4_MOUNT2_DAX_NEVER))) {
-			fail_dax_change_remount:
-				ext4_msg(sb, KERN_ERR, "can't change "
-					 "dax mount option while remounting");
-				return -1;
-			}
-			if (is_remount &&
-			    (test_opt(sb, DATA_FLAGS) ==
-			     EXT4_MOUNT_JOURNAL_DATA)) {
-				    ext4_msg(sb, KERN_ERR, "can't mount with "
-					     "both data=journal and dax");
-				    return -1;
-			}
 			ext4_msg(sb, KERN_WARNING,
 				"DAX enabled. Warning: EXPERIMENTAL, use at your own risk");
 			sbi->s_mount_opt |= EXT4_MOUNT_DAX_ALWAYS;
 			sbi->s_mount_opt2 &= ~EXT4_MOUNT2_DAX_NEVER;
 			break;
 		case Opt_dax_never:
-			if (is_remount &&
-			    (!(sbi->s_mount_opt2 & EXT4_MOUNT2_DAX_NEVER) ||
-			     (sbi->s_mount_opt & EXT4_MOUNT_DAX_ALWAYS)))
-				goto fail_dax_change_remount;
 			sbi->s_mount_opt2 |= EXT4_MOUNT2_DAX_NEVER;
 			sbi->s_mount_opt &= ~EXT4_MOUNT_DAX_ALWAYS;
 			break;
 		case Opt_dax_inode:
-			if (is_remount &&
-			    ((sbi->s_mount_opt & EXT4_MOUNT_DAX_ALWAYS) ||
-			     (sbi->s_mount_opt2 & EXT4_MOUNT2_DAX_NEVER) ||
-			     !(sbi->s_mount_opt2 & EXT4_MOUNT2_DAX_INODE)))
-				goto fail_dax_change_remount;
 			sbi->s_mount_opt &= ~EXT4_MOUNT_DAX_ALWAYS;
 			sbi->s_mount_opt2 &= ~EXT4_MOUNT2_DAX_NEVER;
 			/* Strictly for printing options */
@@ -5536,10 +5518,16 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 		goto restore_opts;
 	}
 
-	if ((sbi->s_mount_opt ^ old_opts.s_mount_opt) & EXT4_MOUNT_DAX_ALWAYS) {
+	if ((sbi->s_mount_opt ^ old_opts.s_mount_opt) & EXT4_MOUNT_DAX_ALWAYS ||
+	    (sbi->s_mount_opt2 ^ old_opts.s_mount_opt2) & EXT4_MOUNT2_DAX_NEVER ||
+	    (sbi->s_mount_opt2 ^ old_opts.s_mount_opt2) & EXT4_MOUNT2_DAX_INODE) {
 		ext4_msg(sb, KERN_WARNING, "warning: refusing change of "
-			"dax flag with busy inodes while remounting");
-		sbi->s_mount_opt ^= EXT4_MOUNT_DAX_ALWAYS;
+			"dax mount option with busy inodes while remounting");
+		sbi->s_mount_opt &= ~EXT4_MOUNT_DAX_ALWAYS;
+		sbi->s_mount_opt |= old_opts.s_mount_opt & EXT4_MOUNT_DAX_ALWAYS;
+		sbi->s_mount_opt2 &= ~(EXT4_MOUNT2_DAX_NEVER | EXT4_MOUNT2_DAX_INODE);
+		sbi->s_mount_opt2 |= old_opts.s_mount_opt2 &
+				     (EXT4_MOUNT2_DAX_NEVER | EXT4_MOUNT2_DAX_INODE);
 	}
 
 	if (sbi->s_mount_flags & EXT4_MF_FS_ABORTED)
