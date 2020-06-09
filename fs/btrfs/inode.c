@@ -29,6 +29,7 @@
 #include <linux/swap.h>
 #include <linux/migrate.h>
 #include <linux/sched/mm.h>
+#include <linux/iomap.h>
 #include <asm/unaligned.h>
 #include "misc.h"
 #include "ctree.h"
@@ -7819,12 +7820,45 @@ out_err:
 	return BLK_QC_T_NONE;
 }
 
-const struct iomap_ops btrfs_dio_iomap_ops = {
+static ssize_t check_direct_IO(struct btrfs_fs_info *fs_info,
+			       const struct iov_iter *iter, loff_t offset)
+{
+	int seg;
+	int i;
+	unsigned int blocksize_mask = fs_info->sectorsize - 1;
+	ssize_t retval = -EINVAL;
+
+	if (offset & blocksize_mask)
+		goto out;
+
+	if (iov_iter_alignment(iter) & blocksize_mask)
+		goto out;
+
+	/* If this is a write we don't need to check anymore */
+	if (iov_iter_rw(iter) != READ || !iter_is_iovec(iter))
+		return 0;
+	/*
+	 * Check to make sure we don't have duplicate iov_base's in this
+	 * iovec, if so return EINVAL, otherwise we'll get csum errors
+	 * when reading back.
+	 */
+	for (seg = 0; seg < iter->nr_segs; seg++) {
+		for (i = seg + 1; i < iter->nr_segs; i++) {
+			if (iter->iov[seg].iov_base == iter->iov[i].iov_base)
+				goto out;
+		}
+	}
+	retval = 0;
+out:
+	return retval;
+}
+
+static const struct iomap_ops btrfs_dio_iomap_ops = {
 	.iomap_begin            = btrfs_dio_iomap_begin,
 	.iomap_end              = btrfs_dio_iomap_end,
 };
 
-const struct iomap_dio_ops btrfs_dops = {
+static const struct iomap_dio_ops btrfs_dops = {
 	.submit_io		= btrfs_submit_direct,
 };
 
