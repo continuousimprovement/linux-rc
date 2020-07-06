@@ -17,7 +17,6 @@ build:fedora:
   image: fedora:latest
   before_script:
   - dnf check-update
-  - dnf update -y
   - dnf install flex bison elfutils-libelf-devel openssl-devel rsync gcc bc make ncurses ncurses-libs -y
   script:
   - make defconfig
