@@ -1,11 +1,24 @@
-image: ubuntu:latest
-
-before_script:
+build:ubuntu:
+  image: ubuntu:latest
+  before_script:
   - apt-get update
   - apt-get upgrade -yqq
   - apt-get install libncurses5-dev gcc make git exuberant-ctags bc libssl-dev libelf-dev bison flex bsdmainutils rsync -yqq
-
-build:
+  script:
+  - make defconfig
+  - make -j4
+  - mkdir public/
+  - rsync -av arch/ public/
+  artifacts:
+    paths:
+    - public/
+    
+build:fedora:
+  image: fedora:latest
+  before_script:
+  - dnf check-update
+  - dnf update -y
+  - dnf install flex bison elfutils-libelf-devel openssl-devel -yqq
   script:
   - make defconfig
   - make -j4
@@ -20,8 +33,9 @@ pages:
   script:
   - echo 'Nothing to do...'
   dependencies:
-  - build
+  - build:ubuntu
   artifacts:
     paths:
     - public
+
 
