@@ -18,7 +18,7 @@ build:fedora:
   before_script:
   - dnf check-update
   - dnf update -y
-  - dnf install flex bison elfutils-libelf-devel openssl-deve -y
+  - dnf install flex bison elfutils-libelf-devel openssl-devel rsync gcc bc make -y
   script:
   - make defconfig
   - make -j4
