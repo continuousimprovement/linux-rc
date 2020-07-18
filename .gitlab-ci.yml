@@ -14,7 +14,7 @@ build:ubuntu:
     - public/
     
 build:fedora:
-  image: fedora:latest
+  image: registry.gitlab.com/continuousimprovement/linux-rc:latest
   before_script:
   - dnf check-update
   - dnf install flex bison elfutils-libelf-devel openssl-devel rsync gcc bc make ncurses ncurses-libs -y
